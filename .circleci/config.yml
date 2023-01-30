@@ -1,42 +1,20 @@
-version: 2.1
-
+version: '2.1'
 orbs:
- slack: circleci/slack@3.4.2
-
+  android: circleci/android@1.0.3
+  flutter: circleci/flutter@1.0
 jobs:
-  build:
-    docker:
-      - image: oursky/flutter:v1.12.13-hotfix.5
-    working_directory: ~/repo
+  distribute:
+    executor:
+      name: android/android-machine
     steps:
-      - checkout
+      - flutter/install_sdk_and_pub:
+          version: 2.2.3
+      - flutter/install_android_gradle
+      - flutter/install_android_gem
       - run:
-          name: flutter setting
-          command: |
-            flutter pub get
-            flutter pub global activate junitreport
-            mkdir -p ./test-reports/ 2>/dev/null
-      - run:
-          name: Test
-          command: |
-            export PATH="$PATH":"/flutter/.pub-cache/bin"
-            flutter test --machine | tojunit --output ./test-reports/TEST-results.xml
-      - store_artifacts:
-          when: always
-          path: test-reports
-          destination: test-reports
-      - store_test_results:
-          path: test-reports
-      - slack/status:
-          success_message: ':circleci-pass: $CIRCLE_BRANCH のビルドが完了しました\n:github_octocat: User：$CIRCLE_USERNAME'
-          failure_message: ':circleci-fail: $CIRCLE_BRANCH のビルドが失敗しました\n:github_octocat: User：$CIRCLE_USERNAME'
-          webhook: '${SLACK_WEBHOOK}'
-
+          command: bundle exec fastlane distribute
+          working_directory: ios
 workflows:
-  version: 2
-  build-deploy:
+  distribute:
     jobs:
-      - build:
-          filters:
-            branches:
-              only: develop
+      - distribute
